@@ -33,6 +33,8 @@ export interface Item {
   isScam?: boolean;
   scamReason?: string;
   scamRealValue?: number;
+  isStrictNoBargain?: boolean;
+  sellerPersonality?: 'stubborn' | 'urgent' | 'normal' | 'strict_no_bargain';
 }
 
 export interface MarketTrend {
@@ -41,6 +43,7 @@ export interface MarketTrend {
   multiplier: number; // e.g. 1.25 = +25%
   trendDirection: 'up' | 'down' | 'stable';
   newsHeadline: string;
+  isDailyHit?: boolean;
 }
 
 export interface Review {
@@ -125,6 +128,8 @@ export interface ActiveNegotiation {
   chatHistory: ChatMessage[];
   dealClosed: boolean;
   dealSuccess?: boolean;
+  isStrictNoBargain?: boolean;
+  sellerPersonality?: 'stubborn' | 'urgent' | 'normal' | 'strict_no_bargain';
 }
 
 export interface Loan {
@@ -211,4 +216,12 @@ export interface GameState {
   specialization?: ItemCategory | 'all';
   passiveBusinesses?: PassiveBusiness[];
   character?: CharacterStats;
+  auditRisk?: number; // 0 to 100%
+  legalStatus?: {
+    isRegisteredSelfEmployed: boolean;
+    isRegisteredCompany: boolean;
+    hasTaxLawyer: boolean;
+  };
+  funUsesToday?: number;
+  isBusinessTycoonCelebrated?: boolean;
 }

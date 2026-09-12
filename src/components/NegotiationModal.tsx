@@ -18,7 +18,9 @@ import {
   PhoneCall,
   Repeat,
   Gift,
-  Tag
+  Tag,
+  Wallet,
+  Search
 } from 'lucide-react';
 import { ActiveNegotiation, ChatMessage, Skills, ItemCategory } from '../types/game';
 import { sounds } from '../utils/audio';
@@ -46,6 +48,7 @@ interface NegotiationModalProps {
 export type NegotiationTacticKey = 
   | 'quick_cash' 
   | 'tech_flaw' 
+  | 'defect_lever'
   | 'market_compare' 
   | 'taxi_discount' 
   | 'sob_story' 
@@ -115,11 +118,18 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
     if (session.mode === 'buy') {
       // --- PLAYER IS BUYING FROM NPC SELLER ---
       const tacticPool = PLAYER_TACTIC_LINES[tactic];
-      if (tacticPool && tacticPool.length > 0 && tactic !== 'custom_offer') {
+      if (tacticPool && tacticPool.length > 0 && tactic !== 'custom_offer' && tactic !== 'defect_lever') {
         playerText = tacticPool[Math.floor(Math.random() * tacticPool.length)];
       }
 
       switch (tactic) {
+        case 'defect_lever':
+          priceDropRatio = 0.25;
+          suggestedPrice = Math.round(currentOffer * (1 - priceDropRatio) / 100) * 100;
+          playerText = `Я проверил этот лот перед покупкой: тут скрытый дефект — «${session.item.hiddenDefect}»! Скидывайте ${(currentOffer - suggestedPrice).toLocaleString('ru-RU')} ₽ на ремонт, иначе брать не буду!`;
+          moodImpact = 0; // Caught red-handed, no patience penalty!
+          break;
+
         case 'quick_cash':
           priceDropRatio = 0.12 + negBonus * 0.8 + specBonus;
           suggestedPrice = Math.round(currentOffer * (1 - priceDropRatio) / 100) * 100;
@@ -195,6 +205,11 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
           setCustomPriceInput('');
           break;
         }
+      }
+
+      // Check if seller refuses any bargaining
+      if (session.isStrictNoBargain && tactic !== 'defect_lever' && suggestedPrice < session.initialPrice) {
+        isInstantWalkAway = true;
       }
     } else {
       // --- PLAYER IS SELLING TO NPC BUYER ---
@@ -282,9 +297,13 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
         sounds.playFail();
 
         if (session.mode === 'buy') {
-          npcAnswer = isInstantWalkAway
-            ? 'Да пошел ты нафиг со своими ультиматумами! За копейки отдавать не стану. В ЧС!'
-            : SELLER_ANGRY_LINES[Math.floor(Math.random() * SELLER_ANGRY_LINES.length)];
+          if (session.isStrictNoBargain) {
+            npcAnswer = `Вы объявление читали?! Там черным по белому написано: «БЕЗ ТОРГА СОВСЕМ»! Ни рубля не скину. Либо забирайте за ${session.initialPrice.toLocaleString('ru-RU')} ₽, либо разговор окончен.`;
+          } else {
+            npcAnswer = isInstantWalkAway
+              ? 'Да пошел ты нафиг со своими ультиматумами! За копейки отдавать не стану. В ЧС!'
+              : SELLER_ANGRY_LINES[Math.floor(Math.random() * SELLER_ANGRY_LINES.length)];
+          }
         } else {
           npcAnswer = isInstantWalkAway
             ? 'Ну и сиди со своим хламом дальше! Я за эти деньги лучше новое в магазине возьму. Пока!'
@@ -294,7 +313,21 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
         finalPriceForMessage = currentOffer;
       } else if (session.mode === 'buy') {
         // NPC is SELLER
-        if (suggestedPrice >= session.minAcceptablePrice) {
+        if (tactic === 'defect_lever') {
+          // Defect lever caught the seller red-handed! Guaranteed agreement with custom dialogue!
+          accepted = true;
+          npcAnswer = `Чёрт... Вы проверили лот и нашли дефект: «${session.item.hiddenDefect}»! Думал не заметите... Ладно, деваться некуда, признаю косяк. Скидываю ${(currentOffer - suggestedPrice).toLocaleString('ru-RU')} ₽ на ремонт. Забирайте за ${suggestedPrice.toLocaleString('ru-RU')} ₽!`;
+          setCurrentOffer(suggestedPrice);
+          setIsDealAgreed(true);
+          finalPriceForMessage = suggestedPrice;
+        } else if (session.sellerPersonality === 'stubborn' && suggestedPrice < Math.round(session.initialPrice * 0.95)) {
+          // Stubborn seller refuses discounts larger than 5%
+          const stubbornPrice = Math.round(session.initialPrice * 0.95 / 100) * 100;
+          npcAnswer = `Я упёртый продавец, за бесценок хорошую вещь отдавать не буду. Крайняя уступка чисто на кофе — ${stubbornPrice.toLocaleString('ru-RU')} ₽. Меньше не просите!`;
+          setCurrentOffer(stubbornPrice);
+          setIsDealAgreed(false);
+          finalPriceForMessage = stubbornPrice;
+        } else if (suggestedPrice >= session.minAcceptablePrice) {
           // Price is acceptable to seller!
           accepted = true;
           npcAnswer = SELLER_HAPPY_LINES[Math.floor(Math.random() * SELLER_HAPPY_LINES.length)];
@@ -394,6 +427,21 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
                 <span className="text-[10px] bg-neutral-700 px-2 py-0.5 rounded text-neutral-300">
                   {session.mode === 'buy' ? 'Продавец' : 'Покупатель'}
                 </span>
+                {session.isStrictNoBargain && (
+                  <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold">
+                    ⛔ Без торга
+                  </span>
+                )}
+                {session.sellerPersonality === 'stubborn' && (
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">
+                    🗿 Упёртый
+                  </span>
+                )}
+                {session.sellerPersonality === 'urgent' && (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                    ⚡ Срочный слив
+                  </span>
+                )}
                 {isSpecializedInItem && (
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-amber-400" />
@@ -415,10 +463,10 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
           </button>
         </div>
 
-        {/* Patience / Price Meter Bar */}
-        <div className="bg-neutral-950 px-4 py-2 border-b border-neutral-800 flex items-center justify-between gap-4 text-xs">
+        {/* Patience / Price Meter Bar with Player Wallet Balance */}
+        <div className="bg-neutral-950 px-4 py-2 border-b border-neutral-800 flex flex-wrap items-center justify-between gap-3 text-xs">
           {/* NPC Mood/Patience */}
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-[150px]">
             <span className="text-neutral-400 whitespace-nowrap flex items-center gap-1">
               <Flame className={`w-3.5 h-3.5 ${npcPatience < 30 ? 'text-rose-500 animate-pulse' : 'text-amber-400'}`} />
               Терпение:
@@ -434,8 +482,17 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
             <span className="font-mono text-neutral-300 font-bold">{npcPatience}%</span>
           </div>
 
+          {/* Player Wallet Balance (Always clearly visible to avoid guessing) */}
+          <div className="flex items-center gap-1.5 bg-neutral-900 px-2.5 py-1 rounded-lg border border-neutral-700 shrink-0">
+            <Wallet className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-neutral-400">Твой баланс:</span>
+            <span className={`font-mono font-bold text-xs ${session.mode === 'buy' && playerMoney < currentOffer ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {playerMoney.toLocaleString('ru-RU')} ₽
+            </span>
+          </div>
+
           {/* Current offer badge */}
-          <div className="flex items-center gap-1.5 bg-neutral-800 px-2.5 py-1 rounded-lg border border-neutral-700">
+          <div className="flex items-center gap-1.5 bg-neutral-800 px-2.5 py-1 rounded-lg border border-neutral-700 shrink-0">
             <span className="text-neutral-400">Предложение:</span>
             <span className="text-emerald-400 font-extrabold text-sm font-mono">
               {currentOffer.toLocaleString('ru-RU')} ₽
@@ -496,8 +553,32 @@ export const NegotiationModal: React.FC<NegotiationModalProps> = ({
               </div>
 
               {session.mode === 'buy' ? (
-                // --- BUYING TACTICS (8 CHOICES) ---
+                // --- BUYING TACTICS ---
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Defect Lever (if player inspected and found a defect) */}
+                  {session.item.isDefectDiscovered && session.item.hiddenDefect && (
+                    <button
+                      disabled={isNpcTyping}
+                      onClick={() => handleTactic('defect_lever')}
+                      className="col-span-2 sm:col-span-4 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/50 p-2.5 rounded-xl transition flex items-center justify-between gap-2 cursor-pointer shadow-sm text-left"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Search className="w-4 h-4 text-amber-400 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-amber-300 truncate">
+                            🔍 Указать на дефект: «{session.item.hiddenDefect}»
+                          </div>
+                          <div className="text-[10px] text-neutral-400">
+                            Продавец пойман на дефекте из осмотра! Скидка 25% без потери терпения.
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold bg-amber-500/30 text-amber-200 px-2.5 py-1 rounded-lg shrink-0">
+                        -25% скидка
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     disabled={isNpcTyping}
                     onClick={() => handleTactic('quick_cash')}

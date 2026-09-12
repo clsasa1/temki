@@ -83,85 +83,76 @@ export const CATEGORY_NAMES: Record<ItemCategory, { label: string; icon: string 
   real_estate: { label: 'Залоговая недвижимость', icon: 'Building' },
 };
 
-export const INITIAL_TRENDS: MarketTrend[] = [
-  {
-    category: 'gpus',
-    categoryName: 'Видеокарты и майнинг',
-    multiplier: 1.0,
-    trendDirection: 'stable',
-    newsHeadline: 'Крипторынок спокоен, фермеры распродают старые запасы.',
-  },
-  {
-    category: 'computers',
-    categoryName: 'Компьютеры и ноуты',
-    multiplier: 1.1,
-    trendDirection: 'up',
-    newsHeadline: 'Начало сезона учебы и удаленки: растет спрос на ноутбуки.',
-  },
-  {
-    category: 'smartphones',
-    categoryName: 'Смартфоны и гаджеты',
-    multiplier: 1.05,
-    trendDirection: 'up',
-    newsHeadline: 'Спрос на б/у iPhone бьет рекорды перед праздниками.',
-  },
-  {
-    category: 'auto_parts',
-    categoryName: 'Шины, диски и авто',
-    multiplier: 1.25,
-    trendDirection: 'up',
-    newsHeadline: 'Сезон переобувки! Автолюбители скупают комплекты зимней резины и литья.',
-  },
-  {
-    category: 'clothes_fashion',
-    categoryName: 'Одежда, обувь и ресейл',
-    multiplier: 1.15,
-    trendDirection: 'up',
-    newsHeadline: 'Хайп на винтаж и бренды: Jordan, The North Face и Stone Island разлетаются влет.',
-  },
-  {
-    category: 'appliances',
-    categoryName: 'Бытовая техника',
-    multiplier: 1.0,
-    trendDirection: 'stable',
-    newsHeadline: 'Стабильный спрос на роботы-пылесосы, стайлеры Dyson и кофемашины.',
-  },
-  {
-    category: 'audio_retro',
-    categoryName: 'Аудио и ретро-гейминг',
-    multiplier: 0.95,
-    trendDirection: 'down',
-    newsHeadline: 'Любители винила экономят бюджет, ретро-консоли отдают с дисконтом.',
-  },
-  {
-    category: 'tools_equipment',
-    categoryName: 'Инструмент и приборы',
-    multiplier: 1.05,
-    trendDirection: 'up',
-    newsHeadline: 'Ремонтные мастерские активно ищут б/у измерительные приборы и электроинструмент.',
-  },
-  {
-    category: 'wholesale_junk',
-    categoryName: 'Конфискат и опт',
-    multiplier: 1.0,
-    trendDirection: 'stable',
-    newsHeadline: 'Банки выставили на баланс очередные партии залогового оборудования.',
-  },
-  {
-    category: 'cars_flipping',
-    categoryName: 'Авто под перекуп',
-    multiplier: 1.12,
-    trendDirection: 'up',
-    newsHeadline: 'Спрос на вторичный авторынок взлетел: живые машины уходят за считанные часы!',
-  },
-  {
-    category: 'real_estate',
-    categoryName: 'Залоговая недвижимость',
-    multiplier: 1.04,
-    trendDirection: 'up',
-    newsHeadline: 'Банкротные торги переполнены залоговыми квартирами и гаражами с огромным дисконтом.',
-  },
-];
+export function generateDailyTrends(day: number, previousHitCategory?: ItemCategory): MarketTrend[] {
+  const allCategories: ItemCategory[] = [
+    'gpus',
+    'computers',
+    'smartphones',
+    'auto_parts',
+    'clothes_fashion',
+    'appliances',
+    'audio_retro',
+    'tools_equipment',
+    'wholesale_junk',
+    'cars_flipping',
+    'real_estate',
+  ];
+
+  // Pick a random category that was NOT yesterday's hit
+  const candidateHits = allCategories.filter((cat) => cat !== previousHitCategory);
+  const hitCategory = candidateHits[Math.floor(Math.random() * candidateHits.length)] || allCategories[0];
+
+  return allCategories.map((cat) => {
+    const isHit = cat === hitCategory;
+    const catName = CATEGORY_NAMES[cat]?.label || cat;
+
+    if (isHit) {
+      const hitMultiplier = Number((1.45 + Math.random() * 0.35).toFixed(2)); // +45% to +80%
+      const hitHeadlines = [
+        `🔥 ХИТ ДНЯ: Взрывной ажиотаж в категории «${catName}»! Спрос бьет рекорды, товары скупают с наценкой +${Math.round((hitMultiplier - 1) * 100)}%!`,
+        `🔥 ХИТ ДНЯ: Острый дефицит по городу в категории «${catName}»! Перекупщики поднимают цены, покупатели сметают всё подряд!`,
+        `🔥 ХИТ ДНЯ: Вирусный тренд в соцсетях сделал «${catName}» самым желанным товаром дня! Прибыль зашкаливает!`,
+      ];
+      return {
+        category: cat,
+        categoryName: catName,
+        multiplier: hitMultiplier,
+        trendDirection: 'up',
+        newsHeadline: hitHeadlines[Math.floor(Math.random() * hitHeadlines.length)],
+        isDailyHit: true,
+      };
+    }
+
+    // Normal dynamic market swing (0.80 - 1.20)
+    const baseMult = Number((0.85 + Math.random() * 0.30).toFixed(2));
+    const direction: 'up' | 'down' | 'stable' = baseMult > 1.05 ? 'up' : baseMult < 0.95 ? 'down' : 'stable';
+    const normalHeadlines = {
+      up: [
+        `Повышенный интерес покупателей к категории «${catName}». Цены стабильно растут.`,
+        `Рынок оживился: в категории «${catName}» заметен устойчивый приток заказов.`,
+      ],
+      down: [
+        `Временное затишье в категории «${catName}»: покупатели выжидают скидок.`,
+        `Избыток предложений сбил средний чек в категории «${catName}».`,
+      ],
+      stable: [
+        `Стабильный умеренный спрос на «${catName}». Без резких скачков.`,
+      ],
+    };
+
+    const hlList = normalHeadlines[direction];
+    return {
+      category: cat,
+      categoryName: catName,
+      multiplier: baseMult,
+      trendDirection: direction,
+      newsHeadline: hlList[Math.floor(Math.random() * hlList.length)],
+      isDailyHit: false,
+    };
+  });
+}
+
+export const INITIAL_TRENDS: MarketTrend[] = generateDailyTrends(1);
 
 export const INITIAL_PASSIVE_BUSINESSES: PassiveBusiness[] = [
   {
@@ -1205,12 +1196,42 @@ export const GOALS: GameGoal[] = [
   {
     id: 4,
     title: 'Четкий авто для перекупа',
-    description: 'Накопить 1 000 000 ₽ капитала и купить легендарный перекупский ВАЗ-2109.',
+    description: 'Накопить 1 000 000 ₽ капитала и купить рабочий авто для перекупских выездов.',
     targetMoney: 1000000,
-    reward: 'Титул Легендарного Магистра Спекуляций и финал сюжета',
-    actionTitle: 'Купить боевую «Девятку» (-150 000 ₽)',
+    reward: '🚗 Разблокировка АВТО-ТОРГОВ: банкротные автопарки и перекуп иномарок!',
+    actionTitle: 'Купить авто перекупа (-150 000 ₽)',
     repayAmount: 150000,
-    completionMessage: 'Боевая «девятка» на литых дисках ВСМПО урчит под окном! Ты прошел путь от продажи старых зарядок до легенды Горбушки и Авито!',
+    completionMessage: 'Боевая машина урчит под окном! Теперь официально разблокированы крупные Авто-Торги банкротных автопарков и категория «Авто под перекуп»!',
+  },
+  {
+    id: 5,
+    title: 'Оптовый склад и логистика',
+    description: 'Масштабироваться до оптовых поставок и накопить 2 800 000 ₽ капитала.',
+    targetMoney: 2800000,
+    reward: '🏢 Разблокировка ТОРГОВ НЕДВИЖИМОСТЬЮ: залоговые квартиры и боксы!',
+    actionTitle: 'Снять оптовый терминал (-450 000 ₽)',
+    repayAmount: 450000,
+    completionMessage: 'Собственный оптовый хаб и офис в бизнес-центре! Банки открыли тебе доступ к закрытым торгам залоговой недвижимостью и апартаментами!',
+  },
+  {
+    id: 6,
+    title: 'Легализация: ООО «Темщик Холдинг»',
+    description: 'Выйти из серой зоны, зарегистрировать компанию и накопить 6 500 000 ₽.',
+    targetMoney: 6500000,
+    reward: '🛡️ Защита от ФНС и 115-ФЗ: риск блокировок и штрафов снижен на 85%!',
+    actionTitle: 'Зарегистрировать ООО и заплатить налоги (-900 000 ₽)',
+    repayAmount: 900000,
+    completionMessage: 'Гербовая печать ООО «Темщик Холдинг» и белый корпоративный счет! Налоговые риски и блокировки 115-ФЗ теперь сведены к минимуму!',
+  },
+  {
+    id: 7,
+    title: 'Мутация в Венчурного Бизнесмена',
+    description: 'Собрать 15 000 000 ₽ и завершить путь темщика, став респектабельным капиталистом.',
+    targetMoney: 15000000,
+    reward: '🏆 ФИНАЛ ИГРЫ: Статус Олигарха, статья в Forbes и режим «Симулятор Бизнесмена»!',
+    actionTitle: 'Мутировать в Бизнесмена (-2 500 000 ₽)',
+    repayAmount: 2500000,
+    completionMessage: 'ПОБЕДА! Вы прошли тернистый путь от уличного перекупа до генерального директора инвестиционной империи! Forbes посвятил вам главную статью номера!',
   },
 ];
 
@@ -1295,15 +1316,21 @@ export function generateMarketItem(
 
   if (condition !== 'mint' && Math.random() < 0.14) {
     const SCAM_POOLS: Partial<Record<ItemCategory, Array<{ reason: string; scrapRatio: number; note: string }>>> = {
-      electronics: [
+      gpus: [
         { reason: 'Китайский перемаркированный чип GTS 450 с прошитым BIOS под топовую видеокарту', scrapRatio: 0.08, note: 'Срочно! Продаю дешевле рынка, нужны деньги на лечение кота.' },
         { reason: 'Утопленник со следами жесткой коррозии и прогаром текстолита после майнинга', scrapRatio: 0.06, note: 'Стояла у брата в домашнем ПК, только ютуб смотрели.' },
         { reason: 'Муляж с фальшивым кулером и свинцовым утяжелителем вместо рабочих чипов', scrapRatio: 0.05, note: 'Коробка с пломбой, чека нет, подарили на день рождения.' },
+      ],
+      computers: [
+        { reason: 'Прогретый феном северный мост и отвал видеочипа, замазанный термопастой', scrapRatio: 0.08, note: 'Включается, летает, продаю в связи с переездом.' },
       ],
       smartphones: [
         { reason: 'Китайская копия на древнем процессоре MTK с фальшивой оболочкой под iOS', scrapRatio: 0.07, note: 'Подарок бывшей, продаю за полцены, чтобы быстрее забрать кэш.' },
         { reason: 'Заблокирован на чужой iCloud / MDM профиль организации, тусклый дешевый TFT-экран', scrapRatio: 0.09, note: 'Пароль забыли, ребенок натыкал, восстановить не умеем.' },
         { reason: 'Франкенштейн из трех разбитых доноров, плата прогрета строительным феном перед продажей', scrapRatio: 0.08, note: 'Идеальное состояние! Всегда в чехле и бронепленке.' },
+      ],
+      auto_parts: [
+        { reason: 'Колесный диск с трещиной на внутреннем ободе, закрашенной баллончиком', scrapRatio: 0.10, note: 'Ровные, без сварок и прокаток, стояли на личной машине.' },
       ],
       cars_flipping: [
         { reason: 'Сваренный распил из двух битых половин со следами пожара и перебитым VIN!', scrapRatio: 0.15, note: 'Не бита, не крашена, дедушка на дачу ездил по выходным.' },
@@ -1317,13 +1344,13 @@ export function generateMarketItem(
         { reason: 'Дешевая пластиковая подделка под бренд, мотор сгорел на 5-й секунде', scrapRatio: 0.10, note: 'Оригинал из Финляндии, лежал без дела в гараже.' },
         { reason: 'Стертые пластиковые шестерни редуктора, склеенные суперклеем для одного пуска', scrapRatio: 0.08, note: 'Почти не работал, ресурс на 100%.' },
       ],
-      clothing: [
+      clothes_fashion: [
         { reason: 'Дешевый синтетический фейк с рынка, кривые швы и фальшивый логотип', scrapRatio: 0.08, note: 'Брал в фирменном магазине, бирки срезал, не подошел фасон.' },
       ],
-      retro_antiques: [
+      audio_retro: [
         { reason: 'Новодельная силуминовая копия, состаренная кислотой под видом антиквариата', scrapRatio: 0.10, note: 'Найдено на чердаке старого дома профессора.' },
       ],
-      wholesale_lots: [
+      wholesale_junk: [
         { reason: 'Коробка с битым неликвидным хламом со свалки вместо заявленной партии', scrapRatio: 0.08, note: 'Отказники с маркетплейса, отдаю без вскрытия оптом.' },
       ],
       real_estate: [
@@ -1331,7 +1358,7 @@ export function generateMarketItem(
       ],
     };
 
-    const pool = SCAM_POOLS[template.category] || SCAM_POOLS.electronics;
+    const pool = SCAM_POOLS[template.category] || SCAM_POOLS.gpus;
     if (pool && pool.length > 0) {
       const chosenScam = pool[Math.floor(Math.random() * pool.length)];
       isScam = true;
@@ -1352,6 +1379,25 @@ export function generateMarketItem(
 
   const desc = template.descriptions[Math.floor(Math.random() * template.descriptions.length)];
 
+  // 22% chance seller strictly forbids bargaining ("БЕЗ ТОРГА СОВСЕМ")
+  const isStrictNoBargain = Math.random() < 0.22;
+  const personalityRoll = Math.random();
+  const sellerPersonality: 'strict_no_bargain' | 'stubborn' | 'urgent' | 'normal' = 
+    isStrictNoBargain
+      ? 'strict_no_bargain'
+      : personalityRoll < 0.35
+      ? 'stubborn'
+      : personalityRoll < 0.60
+      ? 'urgent'
+      : 'normal';
+
+  let finalSellerNote = sellerNote;
+  if (isStrictNoBargain) {
+    finalSellerNote = finalSellerNote ? `${finalSellerNote} • ⛔ Без торга` : '⛔ Без торга совсем';
+  } else if (sellerPersonality === 'urgent') {
+    finalSellerNote = finalSellerNote ? `${finalSellerNote} • ⚡ Срочный слив` : '⚡ Срочная продажа';
+  }
+
   return {
     id: `item-${Date.now()}-${idSuffix}`,
     name: template.name,
@@ -1362,7 +1408,7 @@ export function generateMarketItem(
     boughtPrice: askingPrice, // for feed item, this acts as seller's asking price
     weightKg: template.weightKg,
     description: desc,
-    sellerNotes: sellerNote,
+    sellerNotes: finalSellerNote,
     hiddenDefect: defect,
     isDefectDiscovered: false,
     isRestored: false,
@@ -1370,6 +1416,8 @@ export function generateMarketItem(
     isScam,
     scamReason,
     scamRealValue,
+    isStrictNoBargain,
+    sellerPersonality,
   };
 }
 
@@ -1733,4 +1781,12 @@ export const INITIAL_STATE: GameState = {
     ownedProperties: [],
     purchasedItems: [],
   },
+  auditRisk: 5,
+  legalStatus: {
+    isRegisteredSelfEmployed: false,
+    isRegisteredCompany: false,
+    hasTaxLawyer: false,
+  },
+  funUsesToday: 0,
+  isBusinessTycoonCelebrated: false,
 };
