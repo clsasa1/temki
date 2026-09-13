@@ -415,6 +415,10 @@ export const RestorationModal: React.FC<RestorationModalProps> = ({
   const procedures = getCategoryProcedures();
 
   const handleApplyProcedure = (proc: typeof procedures[0]) => {
+    if (item.isRestored) {
+      alert('Этот предмет уже обслужен. Повторная обработка не повышает его стоимость.');
+      return;
+    }
     if (playerMoney < proc.cost) {
       alert('Недостаточно денег на материалы и расходники!');
       return;
@@ -477,7 +481,7 @@ export const RestorationModal: React.FC<RestorationModalProps> = ({
         {/* Procedures */}
         <div className="p-4 space-y-3 bg-neutral-900">
           {procedures.map((proc) => {
-            const canAfford = playerMoney >= proc.cost && playerEnergy >= proc.energy;
+            const canAfford = !item.isRestored && playerMoney >= proc.cost && playerEnergy >= proc.energy;
             const previewNewValue = Math.round((item.currentMarketValue * proc.valueMultiplier) / 100) * 100;
             const diff = previewNewValue - item.currentMarketValue;
 
