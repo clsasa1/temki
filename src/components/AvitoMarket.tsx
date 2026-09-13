@@ -126,7 +126,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Top Interactive Trend & Niche Focus Selector */}
       {onSelectSpecialization && (
         <div>
@@ -161,14 +161,14 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
       )}
 
       {/* Search and Filters Bar */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-sm space-y-3">
+      <div className="bg-[#121713] border border-[#344036] rounded-md p-3 sm:p-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           {/* Search box */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Поиск по объявлениям (iPhone, шины, Nokian, Jordan, Dyson, RTX...)"
+              placeholder="Поиск: iPhone, шины, RTX..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-neutral-950 border border-neutral-700/80 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 transition"
@@ -196,6 +196,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
               }}
               className="p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl border border-neutral-700 transition cursor-pointer"
               title="Обновить ленту объявлений (новые продавцы с учетом твоей специализации)"
+              aria-label="Обновить ленту объявлений"
             >
               <RefreshCw className="w-4 h-4 text-neutral-300" />
             </button>
@@ -203,7 +204,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
         </div>
 
         {/* Categories Pills - cleanly wrapped, NO horizontal scrollbar */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 max-h-28 overflow-y-auto">
           <button
             onClick={() => setSelectedCategory('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition cursor-pointer ${
@@ -297,9 +298,9 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
               return (
                 <div
                   key={item.id}
-                  className={`bg-neutral-900 border rounded-2xl p-4 shadow-sm flex flex-col justify-between transition group relative ${
+                  className={`tm-market-card border rounded-md p-4 shadow-sm flex flex-col justify-between transition group relative ${
                     isItemSpecialized
-                      ? 'border-amber-500/60 bg-gradient-to-b from-neutral-900 to-amber-950/10'
+                      ?                       'border-amber-500/60 border-l-4 bg-neutral-900'
                       : 'border-neutral-800 hover:border-neutral-700/80'
                   }`}
                 >

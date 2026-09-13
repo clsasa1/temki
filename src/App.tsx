@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingBag, 
   Gavel, 
@@ -51,52 +51,129 @@ import { GoalCompletedModal } from './components/GoalCompletedModal';
 import { sounds } from './utils/audio';
 
 const STORAGE_KEY = 'temshchik_save_state_v1';
+const MARKET_FEED_SIZE = 54;
+
+function generateAvailableAuctionLots(
+  day: number,
+  trends: GameState['trends'],
+  currentGoalIndex: number,
+) {
+  const lots = [generateAuctionLot(day, trends, 'small')];
+  if (currentGoalIndex >= 3) {
+    lots.push(generateAuctionLot(day, trends, 'vehicles'));
+  }
+  if (currentGoalIndex >= 4) {
+    lots.push(generateAuctionLot(day, trends, 'real_estate'));
+  }
+  return lots;
+}
+
+function hydrateGameState(raw: unknown): GameState | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const parsed = raw as Partial<GameState>;
+  const state: GameState = {
+    ...INITIAL_STATE,
+    ...parsed,
+    skills: { ...INITIAL_STATE.skills, ...(parsed.skills || {}) },
+    inventory: Array.isArray(parsed.inventory) ? parsed.inventory : [],
+    marketFeed: Array.isArray(parsed.marketFeed) ? parsed.marketFeed : [],
+    incomingOffers: Array.isArray(parsed.incomingOffers) ? parsed.incomingOffers : [],
+    auctionLots: Array.isArray(parsed.auctionLots) ? parsed.auctionLots : [],
+    trends: Array.isArray(parsed.trends) ? parsed.trends : INITIAL_STATE.trends,
+    reviews: Array.isArray(parsed.reviews) ? parsed.reviews : INITIAL_STATE.reviews,
+    loans: Array.isArray(parsed.loans) ? parsed.loans : [],
+    passiveBusinesses: Array.isArray(parsed.passiveBusinesses)
+      ? parsed.passiveBusinesses
+      : INITIAL_STATE.passiveBusinesses,
+    character: {
+      ...INITIAL_STATE.character!,
+      ...(parsed.character || {}),
+      ownedCars: parsed.character?.ownedCars || INITIAL_STATE.character!.ownedCars,
+      ownedProperties: parsed.character?.ownedProperties || INITIAL_STATE.character!.ownedProperties,
+      purchasedItems: parsed.character?.purchasedItems || INITIAL_STATE.character!.purchasedItems,
+    },
+    legalStatus: { ...INITIAL_STATE.legalStatus, ...(parsed.legalStatus || {}) },
+  };
+
+  const finite = (value: unknown, fallback: number, min = 0) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.max(min, value) : fallback;
+
+  state.money = finite(parsed.money, INITIAL_STATE.money);
+  state.day = Math.floor(finite(parsed.day, INITIAL_STATE.day, 1));
+  state.reputation = Math.min(5, Math.max(1, finite(parsed.reputation, INITIAL_STATE.reputation, 1)));
+  state.reputationPoints = finite(parsed.reputationPoints, INITIAL_STATE.reputationPoints);
+  state.warehouseLevel = Math.max(1, Math.floor(finite(parsed.warehouseLevel, INITIAL_STATE.warehouseLevel, 1)));
+  state.skills = {
+    negotiation: Math.min(10, Math.max(1, Math.floor(finite(parsed.skills?.negotiation, 1, 1)))),
+    assessment: Math.min(10, Math.max(1, Math.floor(finite(parsed.skills?.assessment, 1, 1)))),
+    restoration: Math.min(10, Math.max(1, Math.floor(finite(parsed.skills?.restoration, 1, 1)))),
+    storage: Math.min(10, Math.max(1, Math.floor(finite(parsed.skills?.storage, 1, 1)))),
+    auctionSmarts: Math.min(10, Math.max(1, Math.floor(finite(parsed.skills?.auctionSmarts, 1, 1)))),
+  };
+  if (state.character) {
+    state.character.aura = finite(parsed.character?.aura, INITIAL_STATE.character!.aura);
+    state.character.maxEnergy = Math.max(100, finite(parsed.character?.maxEnergy, INITIAL_STATE.character!.maxEnergy, 100));
+    state.character.totalSpentOnFlex = finite(
+      parsed.character?.totalSpentOnFlex,
+      INITIAL_STATE.character!.totalSpentOnFlex,
+    );
+    if (!Array.isArray(parsed.character?.ownedCars)) state.character.ownedCars = [];
+    if (!Array.isArray(parsed.character?.ownedProperties)) state.character.ownedProperties = [];
+    if (!Array.isArray(parsed.character?.purchasedItems)) state.character.purchasedItems = [];
+  }
+  state.energy = Math.min(state.character?.maxEnergy || 100, finite(parsed.energy, 100));
+  state.totalProfit = typeof parsed.totalProfit === 'number' && Number.isFinite(parsed.totalProfit)
+    ? parsed.totalProfit
+    : 0;
+  state.dealsCount = Math.floor(finite(parsed.dealsCount, 0));
+  state.currentGoalIndex = Math.max(0, Math.floor(finite(parsed.currentGoalIndex, 0)));
+  state.auctionLots = state.auctionLots.filter(
+    (lot) =>
+      !lot.tier ||
+      lot.tier === 'small' ||
+      (lot.tier === 'vehicles' && state.currentGoalIndex >= 3) ||
+      (lot.tier === 'real_estate' && state.currentGoalIndex >= 4),
+  );
+
+  if (!state.specialization) state.specialization = 'all';
+  const existingCategories = new Set(state.trends.map((trend) => trend.category));
+  state.trends = [
+    ...state.trends,
+    ...INITIAL_STATE.trends.filter((trend) => !existingCategories.has(trend.category)),
+  ];
+
+  return state;
+}
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.specialization) {
-          parsed.specialization = 'all';
+        const parsed = hydrateGameState(JSON.parse(saved));
+        if (parsed) {
+          // Expand the feed when loading an older save with fewer listings.
+          if (parsed.marketFeed.length < MARKET_FEED_SIZE) {
+            const diff = MARKET_FEED_SIZE - parsed.marketFeed.length;
+            const extra = Array.from({ length: diff }).map((_, idx) =>
+              generateMarketItem(`fill-${Date.now()}-${idx}`, parsed.trends, parsed.specialization, parsed.money)
+            );
+            parsed.marketFeed = [...parsed.marketFeed, ...extra];
+          }
+          return parsed;
         }
-        if (!parsed.passiveBusinesses) {
-          parsed.passiveBusinesses = INITIAL_STATE.passiveBusinesses;
-        }
-        if (!parsed.character) {
-          parsed.character = INITIAL_STATE.character;
-        }
-        // Ensure any new category trends exist
-        if (parsed.trends && parsed.trends.length < INITIAL_STATE.trends.length) {
-          const existingCats = new Set(parsed.trends.map((t: any) => t.category));
-          const missingTrends = INITIAL_STATE.trends.filter((t) => !existingCats.has(t.category));
-          parsed.trends = [...parsed.trends, ...missingTrends];
-        }
-        // Expand market feed to 50+ items if old save had fewer
-        if (parsed.marketFeed && parsed.marketFeed.length < 50) {
-          const diff = 54 - parsed.marketFeed.length;
-          const extra = Array.from({ length: diff }).map((_, idx) =>
-            generateMarketItem(`fill-${Date.now()}-${idx}`, parsed.trends || INITIAL_STATE.trends, parsed.specialization || 'all', parsed.money || 15000)
-          );
-          parsed.marketFeed = [...parsed.marketFeed, ...extra];
-        }
-        return parsed;
       }
     } catch {}
     
     // Seed initial state
     const seeded = { ...INITIAL_STATE };
     // Generate 54 initial market items for a huge, bustling marketplace
-    seeded.marketFeed = Array.from({ length: 54 }).map((_, idx) => 
+    seeded.marketFeed = Array.from({ length: MARKET_FEED_SIZE }).map((_, idx) =>
       generateMarketItem(`init-${idx}`, seeded.trends, seeded.specialization, seeded.money)
     );
     // Generate 3 auction lots across tiers
-    seeded.auctionLots = [
-      generateAuctionLot(1, seeded.trends, 'small'),
-      generateAuctionLot(1, seeded.trends, 'vehicles'),
-      generateAuctionLot(1, seeded.trends, 'real_estate'),
-    ];
+    seeded.auctionLots = generateAvailableAuctionLots(1, seeded.trends, seeded.currentGoalIndex);
     return seeded;
   });
 
@@ -113,6 +190,7 @@ export default function App() {
   const [lastPassiveEarned, setLastPassiveEarned] = useState<number>(0);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [celebratingGoal, setCelebratingGoal] = useState<GameGoal | null>(null);
+  const dayTransitionInProgress = useRef(false);
 
   // Save to localStorage whenever critical state changes
   useEffect(() => {
@@ -142,9 +220,15 @@ export default function App() {
             if (availableBots.length > 0) {
               const bidder = availableBots[Math.floor(Math.random() * availableBots.length)];
               const step = currentBid >= 1000000 ? 50000 : currentBid >= 100000 ? 10000 : 2000;
-              currentBid += step + Math.floor(Math.random() * 2) * step;
-              currentLeader = bidder.name;
-              sounds.playHammer();
+              const nextBid = Math.min(
+                bidder.maxBid,
+                currentBid + step + Math.floor(Math.random() * 2) * step,
+              );
+              if (nextBid > currentBid) {
+                currentBid = nextBid;
+                currentLeader = bidder.name;
+                sounds.playHammer();
+              }
             }
           }
 
@@ -211,18 +295,25 @@ export default function App() {
       return;
     }
 
-    const boughtItem: Item = {
-      ...item,
-      boughtPrice: cost,
-    };
-
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money - cost,
-      inventory: [...prev.inventory, boughtItem],
-      marketFeed: prev.marketFeed.filter((it) => it.id !== item.id),
-      energy: Math.max(0, prev.energy - 4),
-    }));
+    setGameState((prev) => {
+      const feedItem = prev.marketFeed.find((marketItem) => marketItem.id === item.id);
+      const weight = prev.inventory.reduce((total, inventoryItem) => total + inventoryItem.weightKg, 0);
+      if (
+        !feedItem ||
+        prev.money < cost ||
+        prev.inventory.length >= effectiveWarehouse.maxSlots ||
+        weight + feedItem.weightKg > effectiveWarehouse.maxWeightKg
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        money: prev.money - cost,
+        inventory: [...prev.inventory, { ...feedItem, boughtPrice: cost }],
+        marketFeed: prev.marketFeed.filter((marketItem) => marketItem.id !== item.id),
+        energy: Math.max(0, prev.energy - 4),
+      };
+    });
   };
 
   // Start negotiation as buyer
@@ -288,13 +379,17 @@ export default function App() {
   const handleFinishNegotiation = (dealAgreed: boolean, finalPrice: number, session: ActiveNegotiation) => {
     setActiveNegotiation(null);
 
-    if (!dealAgreed) return;
+    if (!dealAgreed || !Number.isFinite(finalPrice) || finalPrice <= 0) return;
 
     if (session.mode === 'buy') {
       // Player bought item
       if (gameState.money < finalPrice) return;
       if (totalInventoryWeight + session.item.weightKg > effectiveWarehouse.maxWeightKg) {
         alert('Перевес на складе! Товар не поместился.');
+        return;
+      }
+      if (gameState.inventory.length >= effectiveWarehouse.maxSlots) {
+        alert('Все слоты на складе заняты!');
         return;
       }
 
@@ -305,40 +400,48 @@ export default function App() {
 
       setGameState((prev) => ({
         ...prev,
-        money: prev.money - finalPrice,
-        inventory: [...prev.inventory, boughtItem],
-        marketFeed: prev.marketFeed.filter((it) => it.id !== session.item.id),
-        energy: Math.max(0, prev.energy - 6),
+        ...(prev.money < finalPrice ||
+        !prev.marketFeed.some((it) => it.id === session.item.id) ||
+        prev.inventory.length >= effectiveWarehouse.maxSlots ||
+        prev.inventory.reduce((weight, item) => weight + item.weightKg, 0) + session.item.weightKg > effectiveWarehouse.maxWeightKg
+          ? {}
+          : {
+              money: prev.money - finalPrice,
+              inventory: [...prev.inventory, boughtItem],
+              marketFeed: prev.marketFeed.filter((it) => it.id !== session.item.id),
+              energy: Math.max(0, prev.energy - 6),
+            }),
       }));
     } else {
       // Player sold item!
       const soldItem = session.item;
-      const profit = finalPrice - (soldItem.boughtPrice || 0);
+      setGameState((prev) => {
+        const inventoryItem = prev.inventory.find((item) => item.id === soldItem.id);
+        if (!inventoryItem || !inventoryItem.isListed) return prev;
 
-      // Generate a review based on item condition, defects, and negotiation patience
-      const newReview = generateCustomerReview({
-        item: soldItem,
-        finalPrice,
-        npcName: session.npcName,
-        npcPatience: session.npcPatience,
-        day: gameState.day,
+        const profit = finalPrice - (inventoryItem.boughtPrice || 0);
+        const newReview = generateCustomerReview({
+          item: inventoryItem,
+          finalPrice,
+          npcName: session.npcName,
+          npcPatience: session.npcPatience,
+          day: prev.day,
+        });
+        const allReviews = [newReview, ...prev.reviews];
+        const avgRep = allReviews.reduce((sum, review) => sum + review.stars, 0) / allReviews.length;
+
+        return {
+          ...prev,
+          money: prev.money + finalPrice,
+          totalProfit: prev.totalProfit + profit,
+          dealsCount: prev.dealsCount + 1,
+          inventory: prev.inventory.filter((it) => it.id !== soldItem.id),
+          incomingOffers: prev.incomingOffers.filter((o) => o.itemId !== soldItem.id),
+          reviews: allReviews,
+          reputation: Number(avgRep.toFixed(1)),
+          energy: Math.max(0, prev.energy - 5),
+        };
       });
-
-      // Calculate new reputation
-      const allReviews = [newReview, ...gameState.reviews];
-      const avgRep = allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length;
-
-      setGameState((prev) => ({
-        ...prev,
-        money: prev.money + finalPrice,
-        totalProfit: prev.totalProfit + Math.max(0, profit),
-        dealsCount: prev.dealsCount + 1,
-        inventory: prev.inventory.filter((it) => it.id !== soldItem.id),
-        incomingOffers: prev.incomingOffers.filter((o) => o.itemId !== soldItem.id),
-        reviews: allReviews,
-        reputation: Number(avgRep.toFixed(1)),
-        energy: Math.max(0, prev.energy - 5),
-      }));
     }
   };
 
@@ -349,17 +452,21 @@ export default function App() {
 
     setGameState((prev) => ({
       ...prev,
-      energy: prev.energy - 5,
-      marketFeed: prev.marketFeed.map((it) => 
-        it.id === itemId ? { ...it, isDefectDiscovered: true } : it
-      ),
+      ...(prev.energy < 5 || !prev.marketFeed.some((item) => item.id === itemId && !item.isDefectDiscovered)
+        ? {}
+        : {
+            energy: prev.energy - 5,
+            marketFeed: prev.marketFeed.map((item) =>
+              item.id === itemId ? { ...item, isDefectDiscovered: true } : item
+            ),
+          }),
     }));
   };
 
   // Refresh Avito feed with new random items (54 items for massive bustling feed)
   const handleRefreshFeed = () => {
     setGameState((prev) => {
-      const freshItems = Array.from({ length: 54 }).map((_, i) =>
+      const freshItems = Array.from({ length: MARKET_FEED_SIZE }).map((_, i) =>
         generateMarketItem(`ref-${Date.now()}-${i}`, prev.trends, prev.specialization, prev.money)
       );
       return {
@@ -373,7 +480,7 @@ export default function App() {
   const handleSelectSpecialization = (spec: ItemCategory | 'all') => {
     setGameState((prev) => {
       // Regenerate feed with heavy bias towards chosen specialization!
-      const freshItems = Array.from({ length: 54 }).map((_, i) =>
+      const freshItems = Array.from({ length: MARKET_FEED_SIZE }).map((_, i) =>
         generateMarketItem(`spec-${Date.now()}-${i}`, prev.trends, spec, prev.money)
       );
       return {
@@ -386,24 +493,32 @@ export default function App() {
 
   // Passive business purchase
   const handleBuyBusiness = (business: PassiveBusiness) => {
-    if (gameState.money < business.cost) return;
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money - business.cost,
-      passiveBusinesses: (prev.passiveBusinesses || []).map((b) =>
-        b.id === business.id ? { ...b, isUnlocked: true } : b
-      ),
-    }));
+    if (gameState.money < business.cost || business.isUnlocked) return;
+    setGameState((prev) => {
+      const storedBusiness = (prev.passiveBusinesses || []).find((candidate) => candidate.id === business.id);
+      if (!storedBusiness || storedBusiness.isUnlocked || prev.money < storedBusiness.cost) return prev;
+      return {
+        ...prev,
+        money: prev.money - storedBusiness.cost,
+        passiveBusinesses: (prev.passiveBusinesses || []).map((candidate) =>
+          candidate.id === storedBusiness.id ? { ...candidate, isUnlocked: true } : candidate
+        ),
+      };
+    });
   };
 
   // Side gig execution for quick cash when broke or extra energy
   const handleDoSideGig = (gig: SideGig) => {
     if (gameState.energy < gig.energyCost) return;
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money + gig.reward,
-      energy: Math.max(0, prev.energy - gig.energyCost),
-    }));
+    setGameState((prev) =>
+      prev.energy < gig.energyCost
+        ? prev
+        : {
+            ...prev,
+            money: prev.money + gig.reward,
+            energy: Math.max(0, prev.energy - gig.energyCost),
+          }
+    );
   };
 
   // Place bid on Auction lot
@@ -411,7 +526,13 @@ export default function App() {
     setGameState((prev) => ({
       ...prev,
       auctionLots: prev.auctionLots.map((lot) => {
-        if (lot.id !== lotId) return lot;
+        if (
+          lot.id !== lotId ||
+          lot.isCompleted ||
+          !Number.isFinite(newBid) ||
+          newBid <= lot.currentBid ||
+          newBid > prev.money
+        ) return lot;
         return {
           ...lot,
           currentBid: newBid,
@@ -432,56 +553,51 @@ export default function App() {
     sounds.playTap();
     setGameState((prev) => ({
       ...prev,
-      energy: Math.max(0, prev.energy - 8),
-      auctionLots: prev.auctionLots.map((l) =>
-        l.id === lotId ? { ...l, isAppraisalVerified: true } : l
-      ),
+      ...(prev.energy < 8 || !prev.auctionLots.some((lot) => lot.id === lotId && !lot.isAppraisalVerified)
+        ? {}
+        : {
+            energy: Math.max(0, prev.energy - 8),
+            auctionLots: prev.auctionLots.map((lot) =>
+              lot.id === lotId ? { ...lot, isAppraisalVerified: true } : lot
+            ),
+          }),
     }));
   };
 
   // Claim won auction lot into warehouse
   const handleClaimAuctionLot = (lotId: string) => {
-    const lot = gameState.auctionLots.find((l) => l.id === lotId);
-    if (!lot || !lot.wonByPlayer) return;
+    setGameState((prev) => {
+      const lot = prev.auctionLots.find((candidate) => candidate.id === lotId);
+      if (!lot || !lot.wonByPlayer) return prev;
 
-    const lotWeight = lot.items.reduce((acc, it) => acc + it.weightKg, 0);
-    if (totalInventoryWeight + lotWeight > effectiveWarehouse.maxWeightKg) {
-      alert('На складе нет места по весу! Улучшите склад или продайте лишнее.');
-      return;
-    }
-    if (gameState.inventory.length + lot.items.length > effectiveWarehouse.maxSlots) {
-      alert('Недостаточно свободных слотов на складе!');
-      return;
-    }
-    if (gameState.money < lot.currentBid) {
-      alert('У вас нет денег, чтобы оплатить выигранный лот!');
-      return;
-    }
+      const lotWeight = lot.items.reduce((acc, item) => acc + item.weightKg, 0);
+      const inventoryWeight = prev.inventory.reduce((acc, item) => acc + item.weightKg, 0);
+      if (
+        inventoryWeight + lotWeight > effectiveWarehouse.maxWeightKg ||
+        prev.inventory.length + lot.items.length > effectiveWarehouse.maxSlots ||
+        prev.money < lot.currentBid ||
+        lot.items.length === 0
+      ) {
+        return prev;
+      }
 
-    // Distribute cost evenly among items
-    const perItemPrice = Math.round(lot.currentBid / lot.items.length);
-    const stampedItems = lot.items.map((it) => ({
-      ...it,
-      boughtPrice: perItemPrice,
-    }));
+      const perItemPrice = Math.round(lot.currentBid / lot.items.length);
+      const stampedItems = lot.items.map((item) => ({ ...item, boughtPrice: perItemPrice }));
 
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money - lot.currentBid,
-      inventory: [...prev.inventory, ...stampedItems],
-      auctionLots: prev.auctionLots.filter((l) => l.id !== lotId),
-    }));
+      return {
+        ...prev,
+        money: prev.money - lot.currentBid,
+        inventory: [...prev.inventory, ...stampedItems],
+        auctionLots: prev.auctionLots.filter((candidate) => candidate.id !== lotId),
+      };
+    });
   };
 
   // Request new auction lots
   const handleGenerateNewAuctionLots = () => {
     setGameState((prev) => ({
       ...prev,
-      auctionLots: [
-        generateAuctionLot(prev.day, prev.trends, 'small'),
-        generateAuctionLot(prev.day, prev.trends, 'vehicles'),
-        generateAuctionLot(prev.day, prev.trends, 'real_estate'),
-      ],
+      auctionLots: generateAvailableAuctionLots(prev.day, prev.trends, prev.currentGoalIndex),
     }));
   };
 
@@ -491,27 +607,37 @@ export default function App() {
     const nextCfg = WAREHOUSE_LEVELS.find((w) => w.level === nextLvl);
     if (!nextCfg || gameState.money < nextCfg.upgradeCost) return;
 
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money - nextCfg.upgradeCost,
-      warehouseLevel: nextLvl,
-    }));
+    setGameState((prev) =>
+      prev.warehouseLevel !== gameState.warehouseLevel ||
+      prev.money < nextCfg.upgradeCost ||
+      prev.warehouseLevel >= WAREHOUSE_LEVELS[WAREHOUSE_LEVELS.length - 1].level
+        ? prev
+        : {
+            ...prev,
+            money: prev.money - nextCfg.upgradeCost,
+            warehouseLevel: nextLvl,
+          }
+    );
   };
 
   // List item on Avito
   const handleListItemForSale = (item: Item, price: number) => {
+    if (!Number.isFinite(price) || price <= 0) return;
     setGameState((prev) => {
+      const storedItem = prev.inventory.find((inventoryItem) => inventoryItem.id === item.id);
+      if (!storedItem || storedItem.isListed) return prev;
+
       const updatedInventory = prev.inventory.map((it) =>
         it.id === item.id ? { ...it, isListed: true, listedPrice: price } : it
       );
 
-      const targetItem = { ...item, isListed: true, listedPrice: price };
+      const targetItem = { ...storedItem, isListed: true, listedPrice: price };
       const newOffer = generateBuyerOffer(targetItem);
 
       return {
         ...prev,
         inventory: updatedInventory,
-        incomingOffers: [...prev.incomingOffers, newOffer],
+        incomingOffers: [...prev.incomingOffers.filter((offer) => offer.itemId !== item.id), newOffer],
       };
     });
   };
@@ -531,29 +657,33 @@ export default function App() {
   // Accept offer directly
   const handleAcceptOffer = (offer: IncomingBuyerOffer, item: Item) => {
     sounds.playCash();
-    const profit = offer.offeredPrice - (item.boughtPrice || 0);
+    setGameState((prev) => {
+      const storedItem = prev.inventory.find((inventoryItem) => inventoryItem.id === item.id);
+      const offerStillExists = prev.incomingOffers.some((incomingOffer) => incomingOffer.id === offer.id);
+      if (!storedItem || !storedItem.isListed || !offerStillExists) return prev;
 
-    const review = generateCustomerReview({
-      item,
-      finalPrice: offer.offeredPrice,
-      npcName: offer.buyerName,
-      npcPatience: offer.patience,
-      day: gameState.day,
+      const profit = offer.offeredPrice - (storedItem.boughtPrice || 0);
+      const review = generateCustomerReview({
+        item: storedItem,
+        finalPrice: offer.offeredPrice,
+        npcName: offer.buyerName,
+        npcPatience: offer.patience,
+        day: prev.day,
+      });
+      const allReviews = [review, ...prev.reviews];
+      const avgRep = allReviews.reduce((sum, reviewItem) => sum + reviewItem.stars, 0) / allReviews.length;
+
+      return {
+        ...prev,
+        money: prev.money + offer.offeredPrice,
+        totalProfit: prev.totalProfit + profit,
+        dealsCount: prev.dealsCount + 1,
+        inventory: prev.inventory.filter((inventoryItem) => inventoryItem.id !== item.id),
+        incomingOffers: prev.incomingOffers.filter((incomingOffer) => incomingOffer.itemId !== item.id),
+        reviews: allReviews,
+        reputation: Number(avgRep.toFixed(1)),
+      };
     });
-
-    const allReviews = [review, ...gameState.reviews];
-    const avgRep = allReviews.reduce((sum, r) => sum + r.stars, 0) / allReviews.length;
-
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money + offer.offeredPrice,
-      totalProfit: prev.totalProfit + Math.max(0, profit),
-      dealsCount: prev.dealsCount + 1,
-      inventory: prev.inventory.filter((it) => it.id !== item.id),
-      incomingOffers: prev.incomingOffers.filter((o) => o.id !== offer.id && o.itemId !== item.id),
-      reviews: allReviews,
-      reputation: Number(avgRep.toFixed(1)),
-    }));
   };
 
   // Lifestyle item purchase (cars, real estate, gadgets, fun)
@@ -562,6 +692,12 @@ export default function App() {
 
     setGameState((prev) => {
       const currentChar = prev.character || INITIAL_STATE.character!;
+      if (
+        prev.money < item.cost ||
+        (!item.isRepeatable && currentChar.purchasedItems.includes(item.id))
+      ) {
+        return prev;
+      }
       const newAura = currentChar.aura + item.auraBonus;
       const newMaxEnergy = currentChar.maxEnergy + (item.maxEnergyBonus || 0);
       const newEnergy = Math.min(newMaxEnergy, prev.energy + (item.energyBonus || 0));
@@ -607,41 +743,65 @@ export default function App() {
 
   // Quick scrap sell
   const handleQuickScrapSell = (item: Item) => {
-    const scrapPrice = Math.round(item.currentMarketValue * 0.55);
     setGameState((prev) => ({
       ...prev,
-      money: prev.money + scrapPrice,
-      inventory: prev.inventory.filter((it) => it.id !== item.id),
-      incomingOffers: prev.incomingOffers.filter((o) => o.itemId !== item.id),
+      ...(prev.inventory.some((inventoryItem) => inventoryItem.id === item.id)
+        ? {
+            money: prev.money + Math.round(item.currentMarketValue * 0.55),
+            totalProfit: prev.totalProfit + Math.round(item.currentMarketValue * 0.55) - (item.boughtPrice || 0),
+            inventory: prev.inventory.filter((inventoryItem) => inventoryItem.id !== item.id),
+            incomingOffers: prev.incomingOffers.filter((offer) => offer.itemId !== item.id),
+          }
+        : {}),
     }));
   };
 
   // Finish Restoration
   const handleRestoreSuccess = (updatedItem: Item, cost: number, energyUsed: number) => {
     setRestoringItem(null);
-    setGameState((prev) => ({
-      ...prev,
-      money: prev.money - cost,
-      energy: Math.max(0, prev.energy - energyUsed),
-      inventory: prev.inventory.map((it) => (it.id === updatedItem.id ? updatedItem : it)),
-    }));
+    setGameState((prev) => {
+      if (
+        !Number.isFinite(cost) ||
+        !Number.isFinite(energyUsed) ||
+        cost < 0 ||
+        energyUsed < 0 ||
+        prev.money < cost ||
+        prev.energy < energyUsed ||
+        !prev.inventory.some((item) => item.id === updatedItem.id) ||
+        prev.inventory.some((item) => item.id === updatedItem.id && item.isRestored)
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        money: prev.money - cost,
+        energy: Math.max(0, prev.energy - energyUsed),
+        inventory: prev.inventory.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+      };
+    });
   };
 
   // Upgrade Skill
   const handleUpgradeSkill = (skillKey: keyof Skills, cost: number) => {
-    if (gameState.money < cost) return;
+    if (gameState.money < cost || !Number.isFinite(cost)) return;
     setGameState((prev) => ({
       ...prev,
-      money: prev.money - cost,
-      skills: {
-        ...prev.skills,
-        [skillKey]: prev.skills[skillKey] + 1,
-      },
+      ...(prev.money < cost || prev.skills[skillKey] >= 10
+        ? {}
+        : {
+            money: prev.money - cost,
+            skills: {
+              ...prev.skills,
+              [skillKey]: prev.skills[skillKey] + 1,
+            },
+          }),
     }));
   };
 
   // End Day / Sleep mechanic: dynamic market shifts, rent, refreshed feed!
   const handleEndDay = () => {
+    if (isDailySummaryOpen || dayTransitionInProgress.current) return;
+    dayTransitionInProgress.current = true;
     const rent = currentWarehouse.rentPerDay;
     const passive = (gameState.passiveBusinesses || [])
       .filter((b) => b.isUnlocked)
@@ -652,6 +812,8 @@ export default function App() {
   };
 
   const handleStartNextDay = () => {
+    if (!dayTransitionInProgress.current) return;
+    dayTransitionInProgress.current = false;
     setIsDailySummaryOpen(false);
 
     // Calculate dynamic market fluctuations
@@ -701,23 +863,24 @@ export default function App() {
       };
     });
 
-    // Generate fresh market items and fresh auction lots (with safety net budget check)
-    const freshFeed = Array.from({ length: 6 }).map((_, i) =>
+    // Generate a full feed so sleeping does not unexpectedly remove most of the market.
+    const freshFeed = Array.from({ length: MARKET_FEED_SIZE }).map((_, i) =>
       generateMarketItem(`day-${gameState.day + 1}-${i}`, updatedTrends, gameState.specialization, gameState.money)
     );
 
-    const freshLots = [
-      generateAuctionLot(gameState.day + 1, updatedTrends, 'small'),
-      generateAuctionLot(gameState.day + 1, updatedTrends, gameState.money >= 80000 ? 'vehicles' : 'small'),
-      generateAuctionLot(gameState.day + 1, updatedTrends, gameState.money >= 400000 ? 'real_estate' : 'vehicles'),
-    ];
+    const freshLots = generateAvailableAuctionLots(
+      gameState.day + 1,
+      updatedTrends,
+      gameState.currentGoalIndex,
+    );
 
     // Generate new buyer offers for items currently listed using realistic buyer generation
     const listed = updatedInventory.filter((it) => it.isListed);
     const freshOffers: IncomingBuyerOffer[] = [];
 
+    const existingOfferItemIds = new Set(gameState.incomingOffers.map((offer) => offer.itemId));
     listed.forEach((it) => {
-      if (Math.random() < 0.75) {
+      if (!existingOfferItemIds.has(it.id) && Math.random() < 0.75) {
         freshOffers.push(generateBuyerOffer(it));
       }
     });
@@ -756,12 +919,19 @@ export default function App() {
     const goal = GOALS[goalIndex];
     if (!goal) return;
 
+    if (gameState.currentGoalIndex !== goalIndex || gameState.money < goal.targetMoney) {
+      alert(`Для этой цели нужно накопить ${goal.targetMoney.toLocaleString('ru-RU')} ₽.`);
+      return;
+    }
     if (gameState.money < goal.repayAmount) {
       alert(`Недостаточно средств для закрытия цели: требуется ${goal.repayAmount.toLocaleString('ru-RU')} ₽!`);
       return;
     }
 
     setGameState((prev) => {
+      if (prev.currentGoalIndex !== goalIndex || prev.money < goal.targetMoney || prev.money < goal.repayAmount) {
+        return prev;
+      }
       let updatedReputation = prev.reputation;
       if (goal.id === 2) {
         updatedReputation = Math.min(5.0, Number((prev.reputation + 0.3).toFixed(1)));
@@ -772,6 +942,9 @@ export default function App() {
         money: prev.money - goal.repayAmount,
         reputation: updatedReputation,
         currentGoalIndex: prev.currentGoalIndex + 1,
+        auctionLots: goal.id === 4 || goal.id === 5
+          ? generateAvailableAuctionLots(prev.day, prev.trends, prev.currentGoalIndex + 1)
+          : prev.auctionLots,
         // If goal 1 (microloan) was repaid, clear any active loans
         loans: goal.id === 1 ? [] : prev.loans,
       };
@@ -784,7 +957,7 @@ export default function App() {
   const listedItems = gameState.inventory.filter((it) => it.isListed);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950">
+    <div className="tm-shell min-h-screen text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950">
       {/* Top Main Navigation Header */}
       <Header
         state={gameState}
@@ -802,6 +975,32 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 space-y-4">
+        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 border-b border-[#344036] pb-3 sm:pb-4">
+          <div>
+            <p className="tm-kicker mb-1">Операционный стол / день {gameState.day}</p>
+            <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+              Где сегодня лежат деньги?
+            </h2>
+            <p className="text-xs sm:text-sm text-[#93a096] mt-1 max-w-xl">
+              Сканируй ленту, считай маржу и не забивай склад товаром без выхода.
+            </p>
+          </div>
+          <div className="flex justify-between sm:justify-end gap-5 text-xs font-mono text-[#93a096] sm:text-right">
+            <div>
+              <span className="block text-[#667467] uppercase tracking-wider text-[10px]">В ленте</span>
+              <strong className="text-[#e9ad32] text-lg">{gameState.marketFeed.length}</strong>
+            </div>
+            <div>
+              <span className="block text-[#667467] uppercase tracking-wider text-[10px]">Сделок</span>
+              <strong className="text-white text-lg">{gameState.dealsCount}</strong>
+            </div>
+            <div>
+              <span className="block text-[#667467] uppercase tracking-wider text-[10px]">Маржа</span>
+              <strong className="text-[#8fce7b] text-lg">{gameState.totalProfit.toLocaleString('ru-RU')} ₽</strong>
+            </div>
+          </div>
+        </section>
+
         {/* Goals Progress Widget */}
         <GoalsWidget
           currentGoalIndex={gameState.currentGoalIndex}
@@ -811,7 +1010,7 @@ export default function App() {
         />
 
         {/* Navigation Tabs Bar - Responsive Grid, No Horizontal Scrollbar */}
-        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-900 border border-neutral-800 rounded-xl p-1.5 shadow-xs">
+        <nav className="tm-market-deck grid grid-cols-2 sm:grid-cols-4 gap-0 bg-transparent py-1 shadow-xs">
           <button
             id="tab-avito"
             onClick={() => {
@@ -820,8 +1019,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'avito'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Store className="w-4 h-4 shrink-0" />
@@ -839,8 +1038,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'auctions'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Gavel className="w-4 h-4 shrink-0" />
@@ -858,8 +1057,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'inventory'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Warehouse className="w-4 h-4 shrink-0" />
@@ -877,8 +1076,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'my_listings'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <ShoppingBag className="w-4 h-4 shrink-0" />
@@ -915,6 +1114,7 @@ export default function App() {
           <AuctionHouse
             lots={gameState.auctionLots}
             playerMoney={gameState.money}
+            playerEnergy={gameState.energy}
             skills={gameState.skills}
             warehouse={effectiveWarehouse}
             currentWarehouseWeight={totalInventoryWeight}
@@ -922,6 +1122,7 @@ export default function App() {
             onPlaceBid={handlePlaceBid}
             onClaimLot={handleClaimAuctionLot}
             onGenerateNewLots={handleGenerateNewAuctionLots}
+            onInspectLot={handleInspectLot}
           />
         )}
 

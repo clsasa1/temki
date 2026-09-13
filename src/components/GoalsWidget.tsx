@@ -25,7 +25,7 @@ export const GoalsWidget: React.FC<GoalsWidgetProps> = ({
   const progressPercent = Math.min(100, Math.round((money / currentGoal.targetMoney) * 100));
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 shadow-xs">
+    <div className="bg-[#151b16] border border-[#344036] border-l-4 border-l-amber-500 rounded-md p-4 shadow-xs">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Goal Info */}
         <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export const GoalsWidget: React.FC<GoalsWidgetProps> = ({
               <span className="text-[10px] font-semibold text-neutral-400">
                 Цель #{allCompleted ? GOALS.length : currentGoal.id} из {GOALS.length}
               </span>
-              <h3 className="font-bold text-neutral-100 text-xs sm:text-sm">
+              <h3 className="font-black text-white text-sm sm:text-base">
                 {allCompleted ? 'Все цели темщика закрыты!' : currentGoal.title}
               </h3>
             </div>
@@ -52,7 +52,7 @@ export const GoalsWidget: React.FC<GoalsWidgetProps> = ({
           {!allCompleted && (
             <div className="flex-1 min-w-[170px] space-y-1">
               <div className="flex justify-between text-[11px] font-mono">
-                <span className="text-neutral-500">Баланс / Цель:</span>
+                <span className="tm-kicker">Баланс / цель</span>
                 <span className={isTargetMet ? 'text-emerald-400 font-bold' : 'text-neutral-300'}>
                   {money.toLocaleString('ru-RU')} / {currentGoal.targetMoney.toLocaleString('ru-RU')} ₽
                 </span>

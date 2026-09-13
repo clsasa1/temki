@@ -240,7 +240,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     </p>
 
                     {/* Defect banner */}
-                    {item.hiddenDefect && (
+                    {item.hiddenDefect && item.isDefectDiscovered && (
                       <div className="p-2 rounded-xl bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300 flex items-center gap-2 mb-3">
                         <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
                         <span>Дефект: {item.hiddenDefect}</span>
