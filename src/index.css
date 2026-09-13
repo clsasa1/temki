@@ -57,3 +57,35 @@ select {
   border-color: #667467;
   transform: translateY(-2px);
 }
+
+.tm-lifestyle-panel {
+  background: #0b0e0c;
+  border-color: #344036;
+}
+
+.tm-lifestyle-hero {
+  background: #171f18;
+  border-bottom: 1px solid #344036;
+}
+
+.tm-lifestyle-stat {
+  background: #101510;
+  border: 1px solid #344036;
+  border-radius: 0.45rem;
+}
+
+.tm-lifestyle-card {
+  background: #121713;
+  border: 1px solid #2b352d;
+  border-radius: 0.5rem;
+}
+
+.tm-lifestyle-card:hover {
+  border-color: #667467;
+  background: #171f18;
+}
+
+.tm-lifestyle-card__quote {
+  border-left: 2px solid #e9ad32;
+  background: #0b0e0c;
+}

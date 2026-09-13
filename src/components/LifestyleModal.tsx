@@ -87,10 +87,10 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-[#101510] rounded-md max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-[#344036] overflow-hidden my-auto">
+      <div className="tm-lifestyle-panel rounded-md max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border overflow-hidden my-auto">
         
         {/* Top Header Card */}
-        <div className="bg-[#171f18] text-white p-6 relative border-b border-[#344036]">
+        <div className="tm-lifestyle-hero text-white p-5 sm:p-7 relative">
           <button
             onClick={onClose}
             className="absolute top-5 right-5 p-2 rounded-md bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -100,9 +100,9 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-md bg-amber-500/15 border border-amber-400/40 flex items-center justify-center shadow-inner">
+              <div className="w-16 h-16 rounded-md bg-amber-500/15 border border-amber-400/40 flex items-center justify-center shadow-inner shrink-0">
                 <UserRound className="w-9 h-9 text-amber-300" strokeWidth={1.5} />
               </div>
               <div>
@@ -111,18 +111,18 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
                     <Crown className="w-3.5 h-3.5" /> Характеристики темщика
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                   {currentTitle}
                 </h2>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-xs text-[#b4c0b5] mt-1 max-w-lg leading-relaxed">
                   Спускай заработанные деньги на роскошь, поднимай авторитет и открывай новый уровень жизни!
                 </p>
               </div>
             </div>
 
             {/* Stat Counters */}
-            <div className="flex flex-wrap items-center gap-3 self-stretch sm:self-auto">
-              <div className="bg-white/10 border border-white/10 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+            <div className="grid grid-cols-3 gap-2 self-stretch sm:self-auto sm:min-w-[360px]">
+              <div className="tm-lifestyle-stat px-3 py-2.5">
                 <div className="text-[11px] text-slate-300 flex items-center gap-1">
                   <Flame className="w-3 h-3 text-orange-400" /> Авторитет
                 </div>
@@ -131,7 +131,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-white/10 border border-white/10 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+              <div className="tm-lifestyle-stat px-3 py-2.5">
                 <div className="text-[11px] text-slate-300 flex items-center gap-1">
                   <Zap className="w-3 h-3 text-yellow-400" /> Запас сил
                 </div>
@@ -140,7 +140,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
                 </div>
               </div>
 
-              <div className="bg-white/10 border border-white/10 rounded-xl px-3 py-2 flex-1 sm:flex-none">
+              <div className="tm-lifestyle-stat px-3 py-2.5 col-span-3 sm:col-span-1">
                 <div className="text-[11px] text-slate-300 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3 text-emerald-400" /> Спущено на кайфы
                 </div>
@@ -153,10 +153,10 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[#344036] bg-[#0b0e0c] px-6 pt-3 gap-2 overflow-x-auto">
+        <div className="flex border-b border-[#344036] bg-[#0b0e0c] px-4 sm:px-6 pt-2 gap-1 overflow-x-auto">
           <button
             onClick={() => setActiveTab('fun')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === 'fun'
                 ? 'bg-[#171f18] text-amber-300 border-t-2 border-amber-500'
                 : 'text-[#93a096] hover:text-white hover:bg-[#121713]'
@@ -168,7 +168,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
 
           <button
             onClick={() => setActiveTab('gear')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === 'gear'
                 ? 'bg-[#171f18] text-amber-300 border-t-2 border-amber-500'
                 : 'text-[#93a096] hover:text-white hover:bg-[#121713]'
@@ -180,7 +180,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
 
           <button
             onClick={() => setActiveTab('cars')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === 'cars'
                 ? 'bg-[#171f18] text-amber-300 border-t-2 border-amber-500'
                 : 'text-[#93a096] hover:text-white hover:bg-[#121713]'
@@ -192,7 +192,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
 
           <button
             onClick={() => setActiveTab('real_estate')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 py-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               activeTab === 'real_estate'
                 ? 'bg-[#171f18] text-amber-300 border-t-2 border-amber-500'
                 : 'text-[#93a096] hover:text-white hover:bg-[#121713]'
@@ -204,7 +204,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
         </div>
 
         {/* Content list */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#0b0e0c]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0b0e0c]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredItems.map((item) => {
               const bought = isPurchased(item);
@@ -213,7 +213,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
               return (
                 <div
                   key={item.id}
-                  className={`bg-[#121713] rounded-md border p-4 flex flex-col justify-between transition-all ${
+                  className={`tm-lifestyle-card p-4 flex flex-col justify-between transition-all ${
                     bought 
                       ? 'border-emerald-700/70 bg-emerald-950/20'
                       : 'border-[#2b352d] hover:border-[#667467] shadow-sm'
@@ -253,7 +253,7 @@ export const LifestyleModal: React.FC<LifestyleModalProps> = ({
                       {item.description}
                     </p>
 
-                    <blockquote className="text-[11px] italic text-[#93a096] bg-[#0b0e0c] p-2 rounded-md border border-[#2b352d] mb-3">
+                    <blockquote className="tm-lifestyle-card__quote text-[11px] italic text-[#93a096] p-2 mb-3">
                       {item.flavor}
                     </blockquote>
 
