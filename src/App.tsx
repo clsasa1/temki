@@ -975,17 +975,17 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 space-y-4">
-        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#344036] pb-4">
+        <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 border-b border-[#344036] pb-3 sm:pb-4">
           <div>
             <p className="tm-kicker mb-1">Операционный стол / день {gameState.day}</p>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">
               Где сегодня лежат деньги?
             </h2>
-            <p className="text-sm text-[#93a096] mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-[#93a096] mt-1 max-w-xl">
               Сканируй ленту, считай маржу и не забивай склад товаром без выхода.
             </p>
           </div>
-          <div className="flex gap-4 text-xs font-mono text-[#93a096] sm:text-right">
+          <div className="flex justify-between sm:justify-end gap-5 text-xs font-mono text-[#93a096] sm:text-right">
             <div>
               <span className="block text-[#667467] uppercase tracking-wider text-[10px]">В ленте</span>
               <strong className="text-[#e9ad32] text-lg">{gameState.marketFeed.length}</strong>

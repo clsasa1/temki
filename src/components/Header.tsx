@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
     .reduce((sum, b) => sum + b.dailyIncome, 0);
 
   return (
-    <header className="bg-neutral-950 border-b border-neutral-800 text-neutral-200 sticky top-0 z-30">
+    <header className="bg-neutral-950 border-b border-neutral-800 text-neutral-200 sm:sticky sm:top-0 z-30">
       {/* Top Banner / Stats Bar */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Logo & Title */}
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Vital Indicators */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-1.5 sm:gap-2">
           {/* Balance */}
           <div 
             id="wallet-badge" 
@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Fast Action Buttons */}
-          <div className="flex items-center gap-1">
+          <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-1">
             <button
               id="market-trends-btn"
               onClick={onOpenTrends}
