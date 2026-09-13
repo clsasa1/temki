@@ -126,7 +126,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Top Interactive Trend & Niche Focus Selector */}
       {onSelectSpecialization && (
         <div>
@@ -161,7 +161,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
       )}
 
       {/* Search and Filters Bar */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 shadow-sm space-y-3">
+      <div className="bg-[#121713] border border-[#344036] rounded-md p-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           {/* Search box */}
           <div className="relative flex-1">
@@ -196,6 +196,7 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
               }}
               className="p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl border border-neutral-700 transition cursor-pointer"
               title="Обновить ленту объявлений (новые продавцы с учетом твоей специализации)"
+              aria-label="Обновить ленту объявлений"
             >
               <RefreshCw className="w-4 h-4 text-neutral-300" />
             </button>
@@ -297,9 +298,9 @@ export const AvitoMarket: React.FC<AvitoMarketProps> = ({
               return (
                 <div
                   key={item.id}
-                  className={`bg-neutral-900 border rounded-2xl p-4 shadow-sm flex flex-col justify-between transition group relative ${
+                  className={`tm-market-card border rounded-md p-4 shadow-sm flex flex-col justify-between transition group relative ${
                     isItemSpecialized
-                      ? 'border-amber-500/60 bg-gradient-to-b from-neutral-900 to-amber-950/10'
+                      ?                       'border-amber-500/60 border-l-4 bg-neutral-900'
                       : 'border-neutral-800 hover:border-neutral-700/80'
                   }`}
                 >

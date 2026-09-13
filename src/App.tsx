@@ -957,7 +957,7 @@ export default function App() {
   const listedItems = gameState.inventory.filter((it) => it.isListed);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950">
+    <div className="tm-shell min-h-screen text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-neutral-950">
       {/* Top Main Navigation Header */}
       <Header
         state={gameState}
@@ -984,7 +984,7 @@ export default function App() {
         />
 
         {/* Navigation Tabs Bar - Responsive Grid, No Horizontal Scrollbar */}
-        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-900 border border-neutral-800 rounded-xl p-1.5 shadow-xs">
+        <nav className="tm-market-deck grid grid-cols-2 sm:grid-cols-4 gap-0 bg-transparent py-1 shadow-xs">
           <button
             id="tab-avito"
             onClick={() => {
@@ -993,8 +993,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'avito'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Store className="w-4 h-4 shrink-0" />
@@ -1012,8 +1012,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'auctions'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Gavel className="w-4 h-4 shrink-0" />
@@ -1031,8 +1031,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'inventory'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <Warehouse className="w-4 h-4 shrink-0" />
@@ -1050,8 +1050,8 @@ export default function App() {
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs sm:text-sm transition cursor-pointer ${
               activeTab === 'my_listings'
-                ? 'bg-neutral-800 text-amber-400 border border-neutral-700 shadow-xs'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-850/60'
+                ? 'bg-amber-500 text-neutral-950 border border-amber-400 shadow-xs'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
             }`}
           >
             <ShoppingBag className="w-4 h-4 shrink-0" />

@@ -54,16 +54,16 @@ export const Header: React.FC<HeaderProps> = ({
     .reduce((sum, b) => sum + b.dailyIncome, 0);
 
   return (
-    <header className="bg-neutral-900/95 border-b border-neutral-800 text-neutral-200 sticky top-0 z-30 backdrop-blur-xs">
+    <header className="bg-neutral-950 border-b border-neutral-800 text-neutral-200 sticky top-0 z-30">
       {/* Top Banner / Stats Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Logo & Title */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-amber-400 font-bold text-base">
+          <div className="w-9 h-9 rounded-md bg-amber-500 flex items-center justify-center text-neutral-950 font-black text-base">
             ₽
           </div>
           <div>
-            <h1 className="font-bold text-white text-sm sm:text-base leading-tight">
+            <h1 className="font-black tracking-tight text-white text-sm sm:text-base leading-tight">
               Симулятор Темщика
             </h1>
             <span className="text-[11px] text-neutral-400">
@@ -73,11 +73,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Vital Indicators */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Balance */}
           <div 
             id="wallet-badge" 
-            className="flex items-center gap-2 bg-neutral-800/80 px-2.5 py-1.5 rounded-lg border border-neutral-700/80"
+            className="flex items-center gap-2 bg-neutral-900 px-3 py-2 rounded-md border border-neutral-700"
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-400" />
             <div className="flex flex-col">
@@ -97,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
               sounds.playTap();
               onOpenPassiveIncome();
             }}
-            className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-800 px-2.5 py-1.5 rounded-lg border border-neutral-700/80 text-neutral-200 transition cursor-pointer"
+            className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 px-3 py-2 rounded-md border border-neutral-700 text-neutral-200 transition cursor-pointer"
             title="Пассивный доход и халтура"
           >
             <Coins className="w-3.5 h-3.5 text-amber-400" />
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
               sounds.playTap();
               onOpenLifestyle();
             }}
-            className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-800 px-2.5 py-1.5 rounded-lg border border-neutral-700/80 text-neutral-200 transition cursor-pointer"
+            className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 px-3 py-2 rounded-md border border-neutral-700 text-neutral-200 transition cursor-pointer"
             title="Персонаж, гараж, недвижимость и кайфы"
           >
             <Flame className="w-3.5 h-3.5 text-orange-400" />
@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Energy */}
-          <div className="flex items-center gap-2 bg-neutral-800/80 px-2.5 py-1.5 rounded-lg border border-neutral-700/80">
+          <div className="flex items-center gap-2 bg-neutral-900 px-3 py-2 rounded-md border border-neutral-700">
             <Zap className={`w-3.5 h-3.5 ${state.energy < 20 ? 'text-rose-400' : 'text-amber-400'}`} />
             <div className="w-12 sm:w-16 h-1.5 bg-neutral-950 rounded-full overflow-hidden border border-neutral-700">
               <div 
@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="reputation-btn"
             onClick={onOpenReviews}
-            className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-800 px-2 py-1.5 rounded-lg border border-neutral-700/80 transition text-left cursor-pointer"
+            className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 px-2.5 py-2 rounded-md border border-neutral-700 transition text-left cursor-pointer"
             title="Отзывы на Авито"
           >
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Storage Meter */}
           <div 
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs ${
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md border text-xs ${
               isWeightOverloaded || isSlotsFull 
                 ? 'bg-rose-950/30 border-rose-700/60 text-rose-300' 
                 : 'bg-neutral-800/80 border-neutral-700/80 text-neutral-300'
@@ -193,6 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenTrends}
               className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg border border-neutral-700 text-sky-400 transition cursor-pointer"
               title="Динамика рынка"
+              aria-label="Открыть динамику рынка"
             >
               <TrendingUp className="w-4 h-4" />
             </button>
@@ -202,6 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenSkills}
               className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg border border-neutral-700 text-amber-400 transition cursor-pointer"
               title="Навыки темщика"
+              aria-label="Открыть навыки темщика"
             >
               <Award className="w-4 h-4" />
             </button>
@@ -211,6 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onToggleSound}
               className="p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg border border-neutral-700 text-neutral-400 hover:text-neutral-200 transition cursor-pointer"
               title={soundEnabled ? 'Выключить звук' : 'Включить звук'}
+              aria-label={soundEnabled ? 'Выключить звук' : 'Включить звук'}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4" />}
             </button>
@@ -221,7 +224,7 @@ export const Header: React.FC<HeaderProps> = ({
                 sounds.playTap();
                 onEndDay();
               }}
-              className="flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-amber-400 border border-neutral-700 font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer ml-1"
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 border border-amber-400 font-black px-3.5 py-2 rounded-md text-xs transition cursor-pointer ml-1"
             >
               <Moon className="w-3.5 h-3.5 fill-current" />
               <span>Спать</span>

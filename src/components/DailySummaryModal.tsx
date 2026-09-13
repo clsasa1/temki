@@ -35,7 +35,7 @@ export const DailySummaryModal: React.FC<DailySummaryModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
       <div className="bg-neutral-900 border border-neutral-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header banner */}
-        <div className="p-6 bg-gradient-to-b from-amber-950/40 to-neutral-900 border-b border-neutral-800 text-center space-y-2">
+        <div className="p-6 bg-amber-950/25 border-b border-neutral-800 text-center space-y-2">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-inner">
             <Moon className="w-7 h-7 fill-amber-400/20" />
           </div>
@@ -109,7 +109,7 @@ export const DailySummaryModal: React.FC<DailySummaryModalProps> = ({
               sounds.playSuccess();
               onStartNextDay();
             }}
-            className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-black text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer mt-2"
+            className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             <Sun className="w-4 h-4 fill-neutral-950" />
             <span>Начать День {day + 1}</span>
